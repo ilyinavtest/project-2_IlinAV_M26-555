@@ -13,3 +13,4 @@ uv_cache.json
 .vscode/
 .idea/
 .DS_Store
+database.json

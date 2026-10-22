@@ -14,13 +14,12 @@ TEST EDUCATIONAL PROJECT
 `int`, `str`, `bool`.
 
 ### Пример использования:
-
-
+```text 
 >>> database
 ***Процесс работы с таблицей***
 Функции:
 <command> create_table <имя_таблицы> <столбец1:тип> ... - создать таблицу
-...
+
 >>>Введите команду: create_table users name:str age:int
 Таблица "users" успешно создана со столбцами:
   - ID: int
@@ -35,7 +34,8 @@ TEST EDUCATIONAL PROJECT
 
 >>>Введите команду: exit
 Выход из программы.
-
+```
+### Демонстрация работы (Asciinema)
 [![asciicast](https://asciinema.org/a/GBFJzLf7b3GHsvGP.svg)](https://asciinema.org/a/GBFJzLf7b3GHsvGP)
 
 ## CRUD-операции с данными
@@ -54,6 +54,7 @@ TEST EDUCATIONAL PROJECT
 
 ### Пример использования:
 
+```text
 >>>Введите команду: insert into users values ("Sergei", 28, true)
 Запись с ID=1 успешно добавлена в таблицу "users".
 
@@ -66,6 +67,7 @@ TEST EDUCATIONAL PROJECT
 
 >>>Введите команду: delete from users where ID = 1
 Успешно удалено записей: 1.
+```
 
 ### Демонстрация работы (Asciinema)
 [![asciicast](https://asciinema.org/a/wCF6AfHwlMVrURTZ.svg)](https://asciinema.org/a/wCF6AfHwlMVrURTZ)
@@ -76,6 +78,7 @@ TEST EDUCATIONAL PROJECT
 При выполнении команд `drop_table` и `delete` программа запросит подтверждение:
 ```text
 Вы уверены, что хотите выполнить "удаление таблицы"? [y/n]:
+```
 
 ### Демонстрация работы (Asciinema)
 [![asciicast](https://asciinema.org/a/wtxy4bvDDeIeh1HP.svg)](https://asciinema.org/a/wtxy4bvDDeIeh1HP)

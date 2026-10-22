@@ -1,9 +1,12 @@
 """Основная логика работы с таблицами и данными."""
 from typing import Any
 
+from primitive_db.decorators import confirm_action, handle_db_errors, log_time
+
 SUPPORTED_TYPES = {"int", "str", "bool"}
 
 
+@handle_db_errors
 def create_table(
         metadata: dict,
         table_name: str,
@@ -28,7 +31,9 @@ def create_table(
 
         name, col_type = col_str.split(":", 1)
         if col_type not in SUPPORTED_TYPES:
-            print(f'Ошибка: Неподдерживаемый тип "{col_type}". Доступны: int, str, bool.')
+            print(f'Ошибка: Неподдерживаемый тип "{col_type}". '
+                  f'Доступны: int, str, bool.'
+            )
             return metadata
         if name in seen_names:
             print(f'Ошибка: Столбец "{name}" уже существует.')
@@ -45,6 +50,8 @@ def create_table(
     return metadata
 
 
+@confirm_action("удаление таблицы")
+@handle_db_errors
 def drop_table(metadata: dict, table_name: str) -> dict:
     """Удалить таблицу из metadata."""
     if table_name not in metadata:
@@ -69,6 +76,8 @@ def _convert_value(value: str, col_type: str) -> Any:
     return str(value)
 
 
+@handle_db_errors
+@log_time
 def insert(
         metadata: dict,
         table_data: list[dict],
@@ -107,6 +116,8 @@ def insert(
     return table_data
 
 
+@log_time
+@handle_db_errors
 def select(table_data: list[dict], where_clause: dict | None = None) -> list[dict]:
     """Прочитать записи с опциональной фильтрацией."""
     if not where_clause:
@@ -119,6 +130,7 @@ def select(table_data: list[dict], where_clause: dict | None = None) -> list[dic
     return result
 
 
+@handle_db_errors
 def update(
         table_data: list[dict],
         set_clause: dict,
@@ -140,6 +152,8 @@ def update(
     return table_data
 
 
+@confirm_action("удаление записей")
+@handle_db_errors
 def delete(table_data: list[dict], where_clause: dict) -> list[dict]:
     """Удалить записи по условию."""
     initial_len = len(table_data)

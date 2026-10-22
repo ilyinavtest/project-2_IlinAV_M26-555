@@ -1,6 +1,5 @@
 """Движок базы данных: запуск, игровой цикл и парсинг команд."""
 
-import re
 import shlex
 from typing import Any
 
@@ -38,7 +37,8 @@ def _print_help() -> None:
     )
     print("<command> select from <имя> - прочитать все записи")
     print(
-        "<command> update <имя> set <столбец> = <значение> where <столбец> = <значение> "
+        "<command> update <имя> set <столбец> = <значение> "
+        "where <столбец> = <значение> "
         "- обновить запись"
     )
     print(
@@ -115,6 +115,7 @@ def run() -> None:
     print("database")
     print()
     _print_help()
+    cache_result = create_cacher()
 
     while True:
         try:
@@ -171,19 +172,28 @@ def run() -> None:
                 metadata = load_metadata(DB_FILE)
                 metadata = create_table(metadata, cmd_args[0], cmd_args[1:])
                 save_metadata(DB_FILE, metadata)
+                cache_result = create_cacher()
             elif command == "drop_table":
                 if len(cmd_args) != 1:
                     print("Ошибка: Использование: drop_table <имя_таблицы>")
                     continue
                 metadata = load_metadata(DB_FILE)
-                metadata = drop_table(metadata, cmd_args[0])
-                save_metadata(DB_FILE, metadata)
+                new_metadata = drop_table(metadata, cmd_args[0])
+                if new_metadata is not None:
+                    save_metadata(DB_FILE, metadata)
+                    cache_result = create_cacher()
 
             # --- CRUD операции ---
             elif command == "insert":
                 # insert into users values ("Sergei", 28, true)
-                if len(cmd_args) < 4 or cmd_args[0] != "into" or cmd_args[2] != "values":
-                    print("Ошибка: Использование: insert into <имя> values (<зн1>, <зн2>...)")
+                if (
+                        len(cmd_args) < 4
+                        or cmd_args[0] != "into"
+                        or cmd_args[2] != "values"
+                ):
+                    print("Ошибка: Использование: "
+                          "insert into <имя> values (<зн1>, <зн2>...)"
+                    )
                     continue
 
                 t_name = cmd_args[1]
@@ -191,28 +201,32 @@ def run() -> None:
                 values_str = " ".join(cmd_args[3:])
                 # Убираем внешние скобки
                 if not (values_str.startswith("(") and values_str.endswith(")")):
-                    print("Ошибка: Значения должны быть в скобках (значение1, значение2)")
+                    print(
+                        "Ошибка: Значения должны быть в скобках "
+                        "(значение1, значение2)"
+                    )
                     continue
 
                 values_str = values_str[1:-1]
-                # Простой сплит по запятой (для сложных случаев с запятыми в строках нужен regex)
+                # Простой сплит по запятой
                 values = [v.strip() for v in values_str.split(",")]
 
                 metadata = load_metadata(DB_FILE)
                 table_data = load_table_data(t_name)
 
                 new_data = insert(metadata, table_data, t_name, values)
-                save_table_data(t_name, new_data)
+                if new_data is not None:
+                    save_table_data(t_name, new_data)
+                    cache_result = create_cacher()
 
             elif command == "select":
-                # select from users where age = 28
-                # select from users
                 if len(cmd_args) < 2 or cmd_args[0] != "from":
                     print("Ошибка: Использование: select from <имя> [where ...]")
                     continue
 
                 t_name = cmd_args[1]
                 where_clause = None
+                where_key = "all"
 
                 if len(cmd_args) > 2:
                     if cmd_args[2] != "where":
@@ -220,20 +234,29 @@ def run() -> None:
                         continue
                     where_str = " ".join(cmd_args[3:])
                     where_clause = _parse_condition(where_str)
+                    where_key = str(where_clause)
 
                 metadata = load_metadata(DB_FILE)
                 if t_name not in metadata:
                     print(f'Ошибка: Таблица "{t_name}" не существует.')
                     continue
 
-                table_data = load_table_data(t_name)
-                filtered_data = select(table_data, where_clause)
+                cache_key = f"select_{t_name}_{where_key}"
+
+                def fetch_data():
+                    table_data = load_table_data(t_name)
+                    return select(table_data, where_clause)
+
+                filtered_data = cache_result(cache_key, fetch_data)
                 _display_table(t_name, filtered_data, metadata)
 
             elif command == "update":
                 # update users set age = 29 where name = "Sergei"
                 if len(cmd_args) < 6 or cmd_args[1] != "set":
-                    print("Ошибка: Использование: update <имя> set <столбец> = <зн> where <столбец> = <зн>")
+                    print(
+                        "Ошибка: Использование: update <имя> "
+                        "set <столбец> = <зн> where <столбец> = <зн>"
+                    )
                     continue
 
                 t_name = cmd_args[0]
@@ -258,12 +281,17 @@ def run() -> None:
 
                 table_data = load_table_data(t_name)
                 new_data = update(table_data, set_clause, where_clause)
-                save_table_data(t_name, new_data)
+                if new_data is not None:
+                    save_table_data(t_name, new_data)
+                    cache_result = create_cacher()
 
             elif command == "delete":
                 # delete from users where ID = 1
                 if len(cmd_args) < 4 or cmd_args[0] != "from" or cmd_args[2] != "where":
-                    print("Ошибка: Использование: delete from <имя> where <столбец> = <зн>")
+                    print(
+                        "Ошибка: Использование: delete "
+                        "from <имя> where <столбец> = <зн>"
+                    )
                     continue
 
                 t_name = cmd_args[1]
@@ -277,10 +305,30 @@ def run() -> None:
 
                 table_data = load_table_data(t_name)
                 new_data = delete(table_data, where_clause)
-                save_table_data(t_name, new_data)
+                if new_data is not None:
+                    save_table_data(t_name, new_data)
+                    cache_result = create_cacher()
 
             else:
                 print(f"Функции {command} нет. Попробуйте снова.")
 
         except Exception as exc:  # noqa: BLE001
             print(f"Некорректное значение или ошибка: {exc}. Попробуйте снова.")
+
+
+def create_cacher():
+    """Создать функцию кэширования (замыкание)"""
+    cache = {}
+
+    def cache_result(key: str, value_func):
+        """Вернуть значение из кэша или вычислить его и сохранить"""
+        if key in cache:
+            print(f"[Кэш] Использованы данные по ключу: {key}")
+            return cache[key]
+
+        result = value_func()
+        cache[key] = result
+        print(f"[Кэш] Данные сохранены по ключу: {key}")
+        return result
+
+    return cache_result

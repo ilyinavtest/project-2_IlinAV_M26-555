@@ -16,6 +16,8 @@ def load_metadata(filepath: str) -> dict:
             return json.load(f)
     except FileNotFoundError:
         return {}
+    except json.JSONDecodeError:
+        return {}
 
 
 def save_metadata(filepath: str, data: dict) -> None:
@@ -31,8 +33,11 @@ def load_table_data(table_name: str) -> list[dict]:
     filepath = DATA_DIR / f"{table_name}.json"
     try:
         with open(filepath, "r", encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
+            return data if data is not None else []
     except FileNotFoundError:
+        return []
+    except json.JSONDecodeError:
         return []
 
 def save_table_data(table_name: str, data: list[dict]) -> None:

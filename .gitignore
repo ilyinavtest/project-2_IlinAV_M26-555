@@ -15,3 +15,5 @@ uv_cache.json
 .DS_Store
 database.json
 data/
+*.cast
+db_meta.json

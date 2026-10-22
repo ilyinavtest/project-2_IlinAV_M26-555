@@ -15,7 +15,7 @@ TEST EDUCATIONAL PROJECT
 
 ### Пример использования:
 
-```text
+
 >>> database
 ***Процесс работы с таблицей***
 Функции:
@@ -54,7 +54,6 @@ TEST EDUCATIONAL PROJECT
 
 ### Пример использования:
 
-```text
 >>>Введите команду: insert into users values ("Sergei", 28, true)
 Запись с ID=1 успешно добавлена в таблицу "users".
 
